@@ -21,6 +21,8 @@ model User {
   sessions        Session[]
   auditLogs       AuditLog[]
 
+  posts           Post[] 
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?
@@ -106,4 +108,73 @@ model AuditLog {
   createdAt       DateTime    @default(now())
 
   @@map("audit_logs")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+
+  name        String
+  slug        String    @unique
+  description String?
+
+  posts       Post[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("categories")
+}
+
+model Post {
+  id              String      @id @default(cuid())
+
+  title           String
+  slug            String      @unique
+  excerpt         String?
+  content         String
+
+  featuredImage   String?
+
+  status          PostStatus  @default(DRAFT)
+
+  categoryId      String
+  authorId        String
+
+  category        Category    @relation(fields: [categoryId], references: [id])
+  author          User        @relation(fields: [authorId], references: [id])
+
+  comments        Comment[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  @@map("posts")
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+
+  name        String
+  email       String
+  content     String
+
+  isApproved  Boolean   @default(false)
+
+  postId      String
+
+  post        Post      @relation(fields: [postId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("comments")
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }

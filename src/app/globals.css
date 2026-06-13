@@ -128,3 +128,38 @@
     @apply font-sans;
   }
 }
+
+.ql-container {
+  min-height: 500px;
+  font-size: 16px;
+}
+
+.ql-editor {
+  min-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-word;
+}
+
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.ql-container {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* remove horizontal scrolling */
+.ql-editor p,
+.ql-editor div {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}

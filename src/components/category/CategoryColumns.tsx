@@ -2,8 +2,6 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 
-import { Badge } from "@/components/ui/badge";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,15 +11,14 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
-import { Role } from "@/types/role";
+import { Category } from "@/types/category";
 
-import EditRoleDialog from "./EditRoleDialog";
-import DeleteRoleDialog from "./DeleteRoleDialog";
-import ViewRolePermissionsSheet from "./ViewRolePermissionsSheet";
+import EditCategoryDialog from "./EditCategoryDialog";
+import DeleteCategoryDialog from "./DeleteCategoryDialog";
 
-export const columns: ColumnDef<Role>[] = [
+export const columns: ColumnDef<Category>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -33,13 +30,8 @@ export const columns: ColumnDef<Role>[] = [
   },
 
   {
-    id: "permissions",
-
-    header: "Permissions",
-
-    cell: ({ row }) => (
-      <Badge>{row.original.permissions.length} Permissions</Badge>
-    ),
+    accessorKey: "description",
+    header: "Description",
   },
 
   {
@@ -56,7 +48,7 @@ export const columns: ColumnDef<Role>[] = [
     header: "Actions",
 
     cell: ({ row }) => {
-      const role = row.original;
+      const category = row.original;
 
       return (
         <DropdownMenu>
@@ -67,8 +59,8 @@ export const columns: ColumnDef<Role>[] = [
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            <EditRoleDialog
-              roleId={role.id}
+            <EditCategoryDialog
+              categoryId={category.id}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <Pencil className="mr-2 h-4 w-4" />
@@ -77,8 +69,8 @@ export const columns: ColumnDef<Role>[] = [
               }
             />
 
-            <DeleteRoleDialog
-              roleId={role.id}
+            <DeleteCategoryDialog
+              categoryId={category.id}
               trigger={
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
@@ -86,15 +78,6 @@ export const columns: ColumnDef<Role>[] = [
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
-                </DropdownMenuItem>
-              }
-            />
-            <ViewRolePermissionsSheet
-              role={role}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Permissions
                 </DropdownMenuItem>
               }
             />

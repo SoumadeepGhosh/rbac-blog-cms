@@ -13,33 +13,45 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, CheckCircle2, Eye, Trash2 } from "lucide-react";
 
-import { Role } from "@/types/role";
+import { Comment } from "@/types/comment";
 
-import EditRoleDialog from "./EditRoleDialog";
-import DeleteRoleDialog from "./DeleteRoleDialog";
-import ViewRolePermissionsSheet from "./ViewRolePermissionsSheet";
+import ViewCommentDialog from "./ViewCommentDialog";
+import DeleteCommentDialog from "./DeleteCommentDialog";
+import ApproveCommentDialog from "./ApproveCommentDialog";
 
-export const columns: ColumnDef<Role>[] = [
+export const columns: ColumnDef<Comment>[] = [
   {
     accessorKey: "name",
     header: "Name",
   },
 
   {
-    accessorKey: "slug",
-    header: "Slug",
+    accessorKey: "email",
+    header: "Email",
   },
 
   {
-    id: "permissions",
+    id: "post",
 
-    header: "Permissions",
+    header: "Post",
 
     cell: ({ row }) => (
-      <Badge>{row.original.permissions.length} Permissions</Badge>
+      <div className="max-w-[250px] truncate">{row.original.post?.title}</div>
     ),
+  },
+
+  {
+    accessorKey: "isApproved",
+    header: "Status",
+
+    cell: ({ row }) =>
+      row.original.isApproved ? (
+        <Badge>Approved</Badge>
+      ) : (
+        <Badge variant="secondary">Pending</Badge>
+      ),
   },
 
   {
@@ -56,7 +68,7 @@ export const columns: ColumnDef<Role>[] = [
     header: "Actions",
 
     cell: ({ row }) => {
-      const role = row.original;
+      const comment = row.original;
 
       return (
         <DropdownMenu>
@@ -67,18 +79,28 @@ export const columns: ColumnDef<Role>[] = [
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            <EditRoleDialog
-              roleId={role.id}
+            <ViewCommentDialog
+              comment={comment}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
                 </DropdownMenuItem>
               }
             />
 
-            <DeleteRoleDialog
-              roleId={role.id}
+            <ApproveCommentDialog
+              comment={comment}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {comment.isApproved ? "Unapprove" : "Approve"}
+                </DropdownMenuItem>
+              }
+            />
+
+            <DeleteCommentDialog
+              commentId={comment.id}
               trigger={
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
@@ -86,15 +108,6 @@ export const columns: ColumnDef<Role>[] = [
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
-                </DropdownMenuItem>
-              }
-            />
-            <ViewRolePermissionsSheet
-              role={role}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Permissions
                 </DropdownMenuItem>
               }
             />
