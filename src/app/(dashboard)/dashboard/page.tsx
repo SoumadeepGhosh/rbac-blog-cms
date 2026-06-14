@@ -1,75 +1,116 @@
-import ContentPieChart from "@/components/dashboard/ContentPieChart";
-import StatsCard from "@/components/dashboard/StatsCard";
-import UserGrowthChart from "@/components/dashboard/UserGrowthChart";
+// app/dashboard/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
+
 import AppLayout from "@/layouts/AppLayout";
-import {
-  Users,
-  Shield,
-  FileText,
-  FolderTree,
-} from "lucide-react";
+
+import DashboardHero from "@/components/dashboard/DashboardHero";
+import QuickActions from "@/components/dashboard/QuickActions";
+import DashboardStats from "@/components/dashboard/DashboardStats";
+
+import UserGrowthChart from "@/components/dashboard/UserGrowthChart";
+import ContentPieChart from "@/components/dashboard/ContentPieChart";
+
+import RecentPosts from "@/components/dashboard/RecentPostsCard";
+import RecentComments from "@/components/dashboard/RecentCommentsCard";
+
 import ActivityTimeline from "@/components/dashboard/ActivityTimeline";
 
+import { getDashboard } from "@/services/dashboard.service";
+import { getCurrentUser } from "@/services/user.service";
+
 export default function DashboardPage() {
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const [dashboardData, userData] = await Promise.all([
+          getDashboard(),
+          getCurrentUser(),
+        ]);
+
+        setDashboard(dashboardData);
+        setUser(userData);
+      } catch (error) {
+        console.error("Dashboard Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="h-48 animate-pulse rounded-2xl bg-muted" />
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-28 animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="h-80 animate-pulse rounded-2xl bg-muted lg:col-span-2" />
+
+            <div className="h-80 animate-pulse rounded-2xl bg-muted" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!dashboard) {
+    return (
+      <AppLayout>
+        <div className="flex h-[500px] flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+
+          <p className="font-medium">Failed to load dashboard</p>
+
+          <p className="text-sm text-muted-foreground">
+            Please refresh the page or try again later.
+          </p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
-<AppLayout>
-  <div className="mx-auto max-w-7xl space-y-8">
+    <AppLayout>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <DashboardHero stats={dashboard.stats} userName={user?.name} />
 
-    {/* Header */}
-    <div>
-      <h1 className="text-3xl font-bold">
-        Dashboard
-      </h1>
+        <QuickActions />
 
-      <p className="text-muted-foreground">
-        Welcome back, Admin
-      </p>
-    </div>
+        <DashboardStats stats={dashboard.stats} />
 
-    {/* Stats */}
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <StatsCard
-        title="Total Users"
-        value={125}
-        icon={Users}
-        description="Registered users"
-      />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <UserGrowthChart data={dashboard.userGrowth || []} />
+          </div>
 
-      <StatsCard
-        title="Roles"
-        value={3}
-        icon={Shield}
-        description="System roles"
-      />
+          <ContentPieChart data={dashboard.contentBreakdown || []} />
+        </div>
 
-      <StatsCard
-        title="Posts"
-        value={42}
-        icon={FileText}
-        description="Published posts"
-      />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <RecentPosts posts={dashboard.recentPosts || []} />
 
-      <StatsCard
-        title="Categories"
-        value={8}
-        icon={FolderTree}
-        description="Available categories"
-      />
-    </div>
+          <RecentComments comments={dashboard.recentComments || []} />
+        </div>
 
-    {/* Charts */}
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <UserGrowthChart />
+        <ActivityTimeline activities={dashboard.recentActivities || []} />
       </div>
-
-      <ContentPieChart />
-    </div>
-
-    {/* Activity */}
-    <ActivityTimeline />
-
-  </div>
-</AppLayout>
+    </AppLayout>
   );
 }

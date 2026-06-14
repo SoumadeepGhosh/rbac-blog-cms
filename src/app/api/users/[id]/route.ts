@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateUserSchema } from "@/lib/validations/user.validation";
+import { createAuditLog } from "@/lib/audit-log";
+import { hasPermission } from "@/lib/permissions";
 
 interface Props {
   params: Promise<{
@@ -64,7 +66,19 @@ export async function PUT(request: NextRequest, { params }: Props) {
     const { id } = await params;
     const body = await request.json();
     const data = updateUserSchema.parse(body);
+    const allowed = await hasPermission("manage_users");
 
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
     const user = await prisma.user.update({
       where: {
         id,
@@ -75,6 +89,12 @@ export async function PUT(request: NextRequest, { params }: Props) {
         email: data.email,
         isActive: data.isActive,
       },
+    });
+
+    await createAuditLog("USER_UPDATED", "USER", user.id, {
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
     });
 
     return NextResponse.json({
@@ -102,7 +122,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params;
 
-    await prisma.user.update({
+    const user = await prisma.user.update({
       where: {
         id,
       },
@@ -110,6 +130,23 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       data: {
         deletedAt: new Date(),
       },
+    });
+    const allowed = await hasPermission("manage_users");
+
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+    await createAuditLog("USER_DELETED", "USER", user.id, {
+      name: user.name,
+      email: user.email,
     });
 
     return NextResponse.json({

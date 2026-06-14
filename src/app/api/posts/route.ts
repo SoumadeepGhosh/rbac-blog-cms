@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { createPostSchema } from "@/lib/validations/post.validation";
 import { ZodError } from "zod";
+import { createAuditLog } from "@/lib/audit-log";
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -110,23 +112,22 @@ export async function POST(request: NextRequest) {
         },
       );
     }
-const canCreate =
+    const canCreate =
   await hasPermission(
-    "post:create"
+    "manage_posts"
   );
 
-if (!canCreate) {
-  return NextResponse.json(
-    {
-      success: false,
-      message:
-        "You don't have permission to create posts",
-    },
-    {
-      status: 403,
-    },
-  );
-}
+    if (!canCreate) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You don't have permission to create posts",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
     const body = await request.json();
 
     const data = createPostSchema.parse(body);
@@ -161,7 +162,11 @@ if (!canCreate) {
         author: true,
       },
     });
-
+    await createAuditLog("POST_CREATED", "POST", post.id, {
+      title: post.title,
+      status: post.status,
+      author: post.author.name,
+    });
     return NextResponse.json(
       {
         success: true,

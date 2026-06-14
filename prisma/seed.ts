@@ -22,6 +22,7 @@ Permissions
     "manage_comments",
     "manage_categories",
     "view_dashboard",
+    "manage_settings",
   ];
 
   for (const permission of permissions) {

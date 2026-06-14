@@ -1,17 +1,11 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 
-import {
-  updateRoleSchema,
-} from "@/lib/validations/role.validation";
+import { updateRoleSchema } from "@/lib/validations/role.validation";
 
-import {
-  hasPermission,
-} from "@/lib/permissions";
+import { hasPermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit-log";
 
 interface Props {
   params: Promise<{
@@ -21,35 +15,29 @@ interface Props {
 
 //Get Role By Id
 
-export async function GET(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function GET(request: NextRequest, { params }: Props) {
   try {
-    const { id } =
-      await params;
+    const { id } = await params;
 
-    const role =
-      await prisma.role.findUnique({
-        where: {
-          id,
-        },
+    const role = await prisma.role.findUnique({
+      where: {
+        id,
+      },
 
-        include: {
-          permissions: {
-            include: {
-              permission: true,
-            },
+      include: {
+        permissions: {
+          include: {
+            permission: true,
           },
         },
-      });
+      },
+    });
 
     if (!role) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Role not found",
+          message: "Role not found",
         },
         {
           status: 404,
@@ -74,15 +62,9 @@ export async function GET(
 }
 
 // UPDATE ROLE
-export async function PUT(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function PUT(request: NextRequest, { params }: Props) {
   try {
-    const allowed =
-      await hasPermission(
-        "manage_roles"
-      );
+    const allowed = await hasPermission("manage_roles");
 
     if (!allowed) {
       return NextResponse.json(
@@ -96,58 +78,48 @@ export async function PUT(
       );
     }
 
-    const { id } =
-      await params;
+    const { id } = await params;
 
-    const body =
-      await request.json();
+    const body = await request.json();
 
-    const data =
-      updateRoleSchema.parse(
-        body
-      );
+    const data = updateRoleSchema.parse(body);
 
-    await prisma.rolePermission.deleteMany(
-      {
-        where: {
-          roleId: id,
+    await prisma.rolePermission.deleteMany({
+      where: {
+        roleId: id,
+      },
+    });
+
+    const role = await prisma.role.update({
+      where: {
+        id,
+      },
+
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+
+        permissions: {
+          create:
+            data.permissionIds?.map((permissionId) => ({
+              permissionId,
+            })) || [],
         },
-      }
-    );
+      },
 
-    const role =
-      await prisma.role.update({
-        where: {
-          id,
-        },
-
-        data: {
-          name: data.name,
-          slug: data.slug,
-          description:
-            data.description,
-
-          permissions: {
-            create:
-              data.permissionIds?.map(
-                (
-                  permissionId
-                ) => ({
-                  permissionId,
-                })
-              ) || [],
+      include: {
+        permissions: {
+          include: {
+            permission: true,
           },
         },
-
-        include: {
-          permissions: {
-            include: {
-              permission: true,
-            },
-          },
-        },
-      });
-
+      },
+    });
+    await createAuditLog("ROLE_UPDATED", "ROLE", role.id, {
+      name: role.name,
+      slug: role.slug,
+    });
     return NextResponse.json({
       success: true,
       data: role,
@@ -156,8 +128,7 @@ export async function PUT(
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to update role",
+        message: "Failed to update role",
       },
       {
         status: 500,
@@ -166,18 +137,11 @@ export async function PUT(
   }
 }
 
-
 // DELETE ROLE
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function DELETE(request: NextRequest, { params }: Props) {
   try {
-    const allowed =
-      await hasPermission(
-        "manage_roles"
-      );
+    const allowed = await hasPermission("manage_roles");
 
     if (!allowed) {
       return NextResponse.json(
@@ -191,22 +155,19 @@ export async function DELETE(
       );
     }
 
-    const { id } =
-      await params;
+    const { id } = await params;
 
-    const role =
-      await prisma.role.findUnique({
-        where: {
-          id,
-        },
-      });
+    const role = await prisma.role.findUnique({
+      where: {
+        id,
+      },
+    });
 
     if (!role) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Role not found",
+          message: "Role not found",
         },
         {
           status: 404,
@@ -214,15 +175,11 @@ export async function DELETE(
       );
     }
 
-    if (
-      role.slug ===
-      "super_admin"
-    ) {
+    if (role.slug === "super_admin") {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Super Admin role cannot be deleted",
+          message: "Super Admin role cannot be deleted",
         },
         {
           status: 403,
@@ -230,21 +187,17 @@ export async function DELETE(
       );
     }
 
-    const assignedUsers =
-      await prisma.userRole.count({
-        where: {
-          roleId: id,
-        },
-      });
+    const assignedUsers = await prisma.userRole.count({
+      where: {
+        roleId: id,
+      },
+    });
 
-    if (
-      assignedUsers > 0
-    ) {
+    if (assignedUsers > 0) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Role is assigned to users",
+          message: "Role is assigned to users",
         },
         {
           status: 400,
@@ -252,23 +205,26 @@ export async function DELETE(
       );
     }
 
-    await prisma.role.delete({
+    const deletedRole = await prisma.role.delete({
       where: {
         id,
       },
     });
 
+    await createAuditLog("ROLE_DELETED", "ROLE", deletedRole.id, {
+      name: deletedRole.name,
+      slug: deletedRole.slug,
+    });
+
     return NextResponse.json({
       success: true,
-      message:
-        "Role deleted successfully",
+      message: "Role deleted successfully",
     });
   } catch {
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to delete role",
+        message: "Failed to delete role",
       },
       {
         status: 500,

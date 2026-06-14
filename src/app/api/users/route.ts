@@ -4,9 +4,9 @@ import argon2 from "argon2";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { createUserSchema } from "@/lib/validations/user.validation";
+import { createAuditLog } from "@/lib/audit-log";
 
-
- //     List User
+//     List User
 export async function GET(request: NextRequest) {
   try {
     const allowed = await hasPermission("manage_users");
@@ -99,29 +99,24 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-   //  Create User
+//  Create User
 export async function POST(request: NextRequest) {
   try {
-   const allowed = await hasPermission(
-  "manage_users"
-);
+    const allowed = await hasPermission("manage_users");
 
-console.log(
-  "CREATE USER ALLOWED:",
-  allowed
-);
+    console.log("CREATE USER ALLOWED:", allowed);
 
-if (!allowed) {
-  return NextResponse.json(
-    {
-      success: false,
-      message: "Forbidden",
-    },
-    {
-      status: 403,
-    },
-  );
-}
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
 
     const body = await request.json();
 
@@ -186,7 +181,11 @@ if (!allowed) {
         },
       },
     });
-
+    await createAuditLog("USER_CREATED", "USER", user.id, {
+      name: user.name,
+      email: user.email,
+      role: user.roles[0]?.role?.name,
+    });
     return NextResponse.json(
       {
         success: true,

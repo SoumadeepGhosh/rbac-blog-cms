@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { getCurrentUser } from "@/services/user.service";
 import { logout } from "@/services/auth.service";
@@ -22,6 +22,7 @@ interface CurrentUser {
   id: string;
   name: string;
   email: string;
+  avatar?: string | null;
 }
 
 export default function UserNav() {
@@ -63,7 +64,9 @@ export default function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger className="w-full">
         <div className="flex items-center gap-3 rounded-lg border p-2 hover:bg-muted">
-          <Avatar>
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user.avatar || ""} alt={user.name} />
+
             <AvatarFallback>
               {user.name?.charAt(0)?.toUpperCase()}
             </AvatarFallback>
@@ -80,10 +83,6 @@ export default function UserNav() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem>
-          <User className="mr-2 h-4 w-4" />
-          Profile
-        </DropdownMenuItem>
 
         <DropdownMenuItem>
           <Settings className="mr-2 h-4 w-4" />

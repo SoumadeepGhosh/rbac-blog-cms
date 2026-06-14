@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { updatePostSchema } from "@/lib/validations/post.validation";
 import { ZodError } from "zod";
 import { hasPermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit-log";
 
 interface Params {
   params: Promise<{
@@ -87,7 +88,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
         },
       );
     }
-    const canUpdate = await hasPermission("post:update");
+const canUpdate =
+  await hasPermission(
+    "manage_posts"
+  );
 
     if (!canUpdate) {
       return NextResponse.json(
@@ -111,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         id,
       },
     });
-
+    const oldStatus = existingPost?.status;
     if (!existingPost) {
       return NextResponse.json(
         {
@@ -156,7 +160,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
         author: true,
       },
     });
-
+    await createAuditLog("POST_UPDATED", "POST", post.id, {
+      title: post.title,
+      status: post.status,
+    });
+    if (oldStatus !== "PUBLISHED" && post.status === "PUBLISHED") {
+      await createAuditLog("POST_PUBLISHED", "POST", post.id, {
+        title: post.title,
+      });
+    }
     return NextResponse.json({
       success: true,
       data: post,
@@ -209,7 +221,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
         },
       );
     }
-    const canDelete = await hasPermission("post:delete");
+const canDelete =
+  await hasPermission(
+    "manage_posts"
+  );
 
     if (!canDelete) {
       return NextResponse.json(
@@ -242,7 +257,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       );
     }
 
-    await prisma.post.update({
+    const deletedPost = await prisma.post.update({
       where: {
         id,
       },
@@ -250,6 +265,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       data: {
         deletedAt: new Date(),
       },
+    });
+
+    await createAuditLog("POST_DELETED", "POST", deletedPost.id, {
+      title: deletedPost.title,
     });
 
     return NextResponse.json({

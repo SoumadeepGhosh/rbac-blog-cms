@@ -1,13 +1,10 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 
-import {
-  updateCategorySchema,
-} from "@/lib/validations/category.validation";
+import { updateCategorySchema } from "@/lib/validations/category.validation";
+import { hasPermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit-log";
 
 export async function GET(
   request: NextRequest,
@@ -17,18 +14,28 @@ export async function GET(
     params: Promise<{
       id: string;
     }>;
-  }
+  },
 ) {
-  const { id } =
-    await params;
+  const { id } = await params;
+  const allowed = await hasPermission("manage_categories");
 
-  const category =
-    await prisma.category.findUnique({
-      where: {
-        id,
-        deletedAt: null,
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Forbidden",
       },
-    });
+      {
+        status: 403,
+      },
+    );
+  }
+  const category = await prisma.category.findUnique({
+    where: {
+      id,
+      deletedAt: null,
+    },
+  });
 
   return NextResponse.json({
     success: true,
@@ -44,28 +51,37 @@ export async function PUT(
     params: Promise<{
       id: string;
     }>;
-  }
+  },
 ) {
-  const { id } =
-    await params;
+  const { id } = await params;
+  const allowed = await hasPermission("manage_categories");
 
-  const body =
-    await request.json();
-
-  const data =
-    updateCategorySchema.parse(
-      body
-    );
-
-  const category =
-    await prisma.category.update({
-      where: {
-        id,
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Forbidden",
       },
+      {
+        status: 403,
+      },
+    );
+  }
+  const body = await request.json();
 
-      data,
-    });
+  const data = updateCategorySchema.parse(body);
 
+  const category = await prisma.category.update({
+    where: {
+      id,
+    },
+
+    data,
+  });
+  await createAuditLog("CATEGORY_UPDATED", "CATEGORY", category.id, {
+    name: category.name,
+    slug: category.slug,
+  });
   return NextResponse.json({
     success: true,
     data: category,
@@ -80,12 +96,23 @@ export async function DELETE(
     params: Promise<{
       id: string;
     }>;
-  }
+  },
 ) {
-  const { id } =
-    await params;
+  const { id } = await params;
+  const allowed = await hasPermission("manage_categories");
 
-  await prisma.category.update({
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Forbidden",
+      },
+      {
+        status: 403,
+      },
+    );
+  }
+  const category = await prisma.category.update({
     where: {
       id,
     },
@@ -93,6 +120,11 @@ export async function DELETE(
     data: {
       deletedAt: new Date(),
     },
+  });
+
+  await createAuditLog("CATEGORY_DELETED", "CATEGORY", category.id, {
+    name: category.name,
+    slug: category.slug,
   });
 
   return NextResponse.json({

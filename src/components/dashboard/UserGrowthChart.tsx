@@ -1,9 +1,10 @@
+// components/dashboard/UserGrowthChart.tsx
 "use client";
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,60 +19,82 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const chartData = [
-  { month: "Jan", users: 20 },
-  { month: "Feb", users: 35 },
-  { month: "Mar", users: 52 },
-  { month: "Apr", users: 80 },
-  { month: "May", users: 125 },
-  { month: "Jun", users: 160 },
-];
+interface Props {
+  data: { month: string; users: number }[];
+}
 
-export default function UserGrowthChart() {
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>User Growth</CardTitle>
+    <div className="rounded-lg border bg-popover px-3 py-2 text-sm shadow-md">
+      <p className="font-medium text-popover-foreground">{label}</p>
 
-        <CardDescription>
-          New users over time
-        </CardDescription>
+      <p className="text-muted-foreground">
+        <span className="font-semibold text-blue-500">{payload[0].value}</span>{" "}
+        users
+      </p>
+    </div>
+  );
+}
+
+export default function UserGrowthChart({ data }: Props) {
+  return (
+    <Card className="rounded-2xl border shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-base font-medium">User growth</CardTitle>
+
+        <CardDescription>Monthly registered users</CardDescription>
       </CardHeader>
 
       <CardContent>
-        <div className="h-[320px] w-full">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
-            <LineChart data={chartData}>
+        <div className="h-[320px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ left: -16, right: 8, top: 8, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="userGrowthFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
+                stroke="hsl(var(--border))"
+                strokeOpacity={0.6}
               />
 
               <XAxis
                 dataKey="month"
                 tickLine={false}
                 axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               />
 
               <YAxis
                 tickLine={false}
                 axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               />
 
-              <Tooltip />
+              <Tooltip
+                content={<ChartTooltip />}
+                cursor={{ stroke: "hsl(var(--border))" }}
+              />
 
-              <Line
+              <Area
                 type="monotone"
                 dataKey="users"
-                stroke="#2563eb"
-                strokeWidth={3}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
+                stroke="#3b82f6"
+                strokeWidth={2.5}
+                fill="url(#userGrowthFill)"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

@@ -3,20 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 
-import {
-  createRoleSchema,
-} from "@/lib/validations/role.validation";
+import { createRoleSchema } from "@/lib/validations/role.validation";
+import { createAuditLog } from "@/lib/audit-log";
 
 // LIST ROLES
 
-export async function GET(
-  request: NextRequest
-) {
+export async function GET(request: NextRequest) {
   try {
-    const allowed =
-      await hasPermission(
-        "manage_roles"
-      );
+    const allowed = await hasPermission("manage_roles");
 
     if (!allowed) {
       return NextResponse.json(
@@ -26,26 +20,19 @@ export async function GET(
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
-    const searchParams =
-      request.nextUrl.searchParams;
+    const searchParams = request.nextUrl.searchParams;
 
-    const page = Number(
-      searchParams.get("page") || 1
-    );
+    const page = Number(searchParams.get("page") || 1);
 
-    const limit = Number(
-      searchParams.get("limit") || 10
-    );
+    const limit = Number(searchParams.get("limit") || 10);
 
-    const search =
-      searchParams.get("search") || "";
+    const search = searchParams.get("search") || "";
 
-    const skip =
-      (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     const where = {
       OR: [
@@ -64,31 +51,30 @@ export async function GET(
       ],
     };
 
-    const [roles, total] =
-      await Promise.all([
-        prisma.role.findMany({
-          where,
+    const [roles, total] = await Promise.all([
+      prisma.role.findMany({
+        where,
 
-          skip,
-          take: limit,
+        skip,
+        take: limit,
 
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
+        include: {
+          permissions: {
+            include: {
+              permission: true,
             },
           },
+        },
 
-          orderBy: {
-            name: "asc",
-          },
-        }),
+        orderBy: {
+          name: "asc",
+        },
+      }),
 
-        prisma.role.count({
-          where,
-        }),
-      ]);
+      prisma.role.count({
+        where,
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -100,9 +86,7 @@ export async function GET(
           page,
           limit,
           total,
-          pages: Math.ceil(
-            total / limit
-          ),
+          pages: Math.ceil(total / limit),
         },
       },
     });
@@ -112,26 +96,20 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to fetch roles",
+        message: "Failed to fetch roles",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
 
 // CREATE ROLE
 
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: NextRequest) {
   try {
-    const allowed =
-      await hasPermission(
-        "manage_roles"
-      );
+    const allowed = await hasPermission("manage_roles");
 
     if (!allowed) {
       return NextResponse.json(
@@ -141,67 +119,57 @@ export async function POST(
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
-    const body =
-      await request.json();
+    const body = await request.json();
 
-    const data =
-      createRoleSchema.parse(
-        body
-      );
+    const data = createRoleSchema.parse(body);
 
-    const existingRole =
-      await prisma.role.findUnique({
-        where: {
-          slug: data.slug,
-        },
-      });
+    const existingRole = await prisma.role.findUnique({
+      where: {
+        slug: data.slug,
+      },
+    });
 
     if (existingRole) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Role slug already exists",
+          message: "Role slug already exists",
         },
         {
           status: 409,
-        }
+        },
       );
     }
 
-    const role =
-      await prisma.role.create({
-        data: {
-          name: data.name,
-          slug: data.slug,
-          description:
-            data.description,
+    const role = await prisma.role.create({
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
 
-          permissions: {
-            create:
-              data.permissionIds.map(
-                (
-                  permissionId
-                ) => ({
-                  permissionId,
-                })
-              ),
+        permissions: {
+          create: data.permissionIds.map((permissionId) => ({
+            permissionId,
+          })),
+        },
+      },
+
+      include: {
+        permissions: {
+          include: {
+            permission: true,
           },
         },
-
-        include: {
-          permissions: {
-            include: {
-              permission: true,
-            },
-          },
-        },
-      });
-
+      },
+    });
+    await createAuditLog("ROLE_CREATED", "ROLE", role.id, {
+      name: role.name,
+      slug: role.slug,
+    });
     return NextResponse.json(
       {
         success: true,
@@ -209,7 +177,7 @@ export async function POST(
       },
       {
         status: 201,
-      }
+      },
     );
   } catch (error) {
     console.error(error);
@@ -217,12 +185,11 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to create role",
+        message: "Failed to create role",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

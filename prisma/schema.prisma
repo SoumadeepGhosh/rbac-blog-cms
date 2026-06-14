@@ -173,6 +173,7 @@ model Comment {
   @@map("comments")
 }
 
+
 enum PostStatus {
   DRAFT
   PUBLISHED
