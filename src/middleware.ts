@@ -29,6 +29,7 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/blog",
   ],
 };
 
